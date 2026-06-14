@@ -1,0 +1,83 @@
+<?php
+/**
+ * Plugin activation / DB install.
+ *
+ * @package    \flutterwave\payment_forms
+ */
+
+namespace flutterwave\payment_forms;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Plugin Activation class.
+ */
+class Activation {
+
+	/**
+	 * Install Flutterwave DB Table
+	 */
+	public static function install() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . PFF_FLUTTERWAVE_TABLE;
+
+		include_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		self::create_tables( $table_name );
+		self::maybe_upgrade( $table_name );
+		update_option( 'pff_flutterwave_db_version', '1.1' );
+	}
+
+	/**
+	 * Create the Flutterwave payments table.
+	 */
+	public static function create_tables( $table_name ) {
+		global $wpdb;
+		$query = "CREATE TABLE IF NOT EXISTS `{$table_name}` (
+				id int(11) NOT NULL AUTO_INCREMENT,
+				post_id int(11) NOT NULL,
+				user_id int(11) NOT NULL,
+				email varchar(255) DEFAULT '' NOT NULL,
+				metadata text,
+				paid tinyint(1) NOT NULL DEFAULT 0,
+				plan varchar(255) DEFAULT '' NOT NULL,
+				txn_code varchar(64) DEFAULT '' NOT NULL,
+				txn_code_2 varchar(64) DEFAULT '' NOT NULL,
+				flw_ref varchar(64) DEFAULT '' NOT NULL,
+				transaction_id varchar(64) DEFAULT '' NOT NULL,
+				amount decimal(11,2) NOT NULL DEFAULT 0.00,
+				ip varchar(45) NOT NULL DEFAULT '',
+				deleted_at datetime DEFAULT NULL,
+				created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				paid_at timestamp NULL DEFAULT NULL,
+				modified timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				PRIMARY KEY  (id),
+				KEY post_id (post_id),
+				KEY user_id (user_id),
+				KEY transaction_id (transaction_id)
+			) {$wpdb->get_charset_collate()};";
+		dbDelta( $query );
+	}
+
+	/**
+	 * Run any DB column additions for upgrades.
+	 */
+	public static function maybe_upgrade( $table_name ) {
+		global $wpdb;
+
+		$table_name = esc_sql( $table_name );
+		$version    = get_option( 'pff_flutterwave_db_version', '1.0' );
+
+		if ( version_compare( $version, '1.1', '<' ) ) {
+			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY amount decimal(11,2) NOT NULL DEFAULT 0.00" );
+			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY ip varchar(45) NOT NULL DEFAULT ''" );
+			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY paid tinyint(1) NOT NULL DEFAULT 0" );
+			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY deleted_at datetime DEFAULT NULL" );
+			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY paid_at timestamp NULL DEFAULT NULL" );
+			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY modified timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" );
+			$wpdb->query( "ALTER TABLE `{$table_name}` DROP INDEX id" );
+		}
+	}
+}

@@ -1,0 +1,21 @@
+{
+  "name": "pff-flutterwave",
+  "version": "1.0.0",
+  "description": "Payment Forms for Flutterwave — create WordPress forms that bill clients for goods and services via Flutterwave (v3 Inline Checkout).",
+  "author": "Shola Omofola",
+  "license": "GPL-2.0+",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/somofola/flutterwave-wordpress-forms.git"
+  },
+  "bugs": {
+    "url": "https://github.com/somofola/flutterwave-wordpress-forms/issues"
+  },
+  "homepage": "https://github.com/somofola/flutterwave-wordpress-forms",
+  "main": "gulpfile.js",
+  "scripts": {
+    "build-pot": "wp i18n make-pot . languages/pff-flutterwave.pot",
+    "build-mopo": "rm -R languages/pff-flutterwave-en_EN.mo && cp languages/pff-flutterwave.pot languages/pff-flutterwave-en_EN.po && wp i18n make-mo languages",
+    "translate-US": "cp languages/pff-flutterwave-en_EN.po languages/pff-flutterwave-en_US.po && cp languages/pff-flutterwave-en_EN.mo languages/pff-flutterwave-en_US.mo"
+  }
+}
