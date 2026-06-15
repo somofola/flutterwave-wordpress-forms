@@ -53,9 +53,44 @@ class Payment_History {
 		global $wpdb;
 		$payments_table = $wpdb->prefix . PFF_FLUTTERWAVE_TABLE;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
-		$db_pts        = $wpdb->get_col( "SELECT DISTINCT payment_type FROM `{$payments_table}` WHERE payment_type <> '' AND deleted_at IS NULL ORDER BY payment_type ASC" );
-		$known_pts     = [ 'card', 'banktransfer', 'ussd', 'account', 'mobilemoneyghana', 'mobilemoneyrwanda', 'mobilemoneyuganda', 'mobilemoneyzambia', 'mpesa', 'mobilemoney' ];
-		$payment_types = array_values( array_unique( array_filter( array_merge( $db_pts, $known_pts ) ) ) );
+		$db_pts = $wpdb->get_col( "SELECT DISTINCT payment_type FROM `{$payments_table}` WHERE payment_type <> '' AND deleted_at IS NULL" );
+
+		// Also pull Payment Option values out of metadata JSON (covers pre-1.2 rows with empty payment_type column).
+		$meta_like = '%' . $wpdb->esc_like( '"variable_name":"Payment Option"' ) . '%';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$meta_rows = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT metadata FROM `{$payments_table}` WHERE deleted_at IS NULL AND metadata LIKE %s LIMIT 2000",
+				$meta_like
+			)
+		);
+		$meta_pts = [];
+		foreach ( $meta_rows as $raw ) {
+			$decoded = json_decode( $raw );
+			if ( ! is_array( $decoded ) ) {
+				continue;
+			}
+			foreach ( $decoded as $entry ) {
+				$is_pay_opt = ( isset( $entry->variable_name ) && 'Payment Option' === $entry->variable_name )
+					|| ( isset( $entry->display_name ) && 'Payment Option' === $entry->display_name );
+				if ( $is_pay_opt && isset( $entry->value ) && '' !== trim( $entry->value ) ) {
+					$meta_pts[] = trim( $entry->value );
+					break;
+				}
+			}
+		}
+
+		// Dedupe case-insensitively, keep first-seen casing.
+		$seen          = [];
+		$payment_types = [];
+		foreach ( array_merge( $db_pts, $meta_pts ) as $v ) {
+			$k = strtolower( $v );
+			if ( '' === $k || isset( $seen[ $k ] ) ) {
+				continue;
+			}
+			$seen[ $k ]      = true;
+			$payment_types[] = $v;
+		}
 		sort( $payment_types );
 		?>
 		<div class="wrap">
