@@ -45,7 +45,11 @@ class Helpers {
 			'amount'              => 0,
 			'merchant'            => '',
 			'paybtn'              => esc_html__( 'Pay', 'pff-flutterwave' ),
-			'successmsg'          => esc_html__( 'Thank you for paying!', 'pff-flutterwave' ),
+			'successmsg'          => sprintf(
+				/* translators: %s: support email address */
+				esc_html__( 'Thank you for your payment! A receipt has been sent to your email. If you have any questions or did not receive your receipt, contact support at %s and we will get back to you shortly.', 'pff-flutterwave' ),
+				get_option( 'admin_email' )
+			),
 			'txncharge'           => 'merchant',
 			'loggedin'            => '',
 			'currency'            => 'NGN',

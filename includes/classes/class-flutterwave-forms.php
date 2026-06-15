@@ -95,6 +95,7 @@ final class Payment_Forms {
 			'settings'             => 'Settings',
 			'forms-list'           => 'Forms_List',
 			'submissions'          => 'Submissions',
+			'payment-history'      => 'Payment_History',
 			'forms-update'         => 'Forms_Update',
 			'tinymce-plugin'       => 'TinyMCE_Plugin',
 			'form-shortcode'       => 'Form_Shortcode',
