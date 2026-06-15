@@ -3,7 +3,7 @@
   Plugin Name:  Payment Forms for Flutterwave
   Plugin URI:   https://github.com/somofola/flutterwave-wordpress-forms
   Description:  Payment Forms for Flutterwave allows you create forms that will be used to bill clients for goods and services via Flutterwave.
-  Version:      1.0.7
+  Version:      1.0.8
   Author:       Shola Omofola
   Author URI:   https://github.com/somofola
   License:      GPL-2.0+
@@ -17,7 +17,7 @@ if (!defined('WPINC')) {
 define( 'PFF_FLUTTERWAVE_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PFF_FLUTTERWAVE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PFF_FLUTTERWAVE_MAIN_FILE', __FILE__ );
-define( 'PFF_FLUTTERWAVE_VERSION', '1.0.7' );
+define( 'PFF_FLUTTERWAVE_VERSION', '1.0.8' );
 define( 'PFF_FLUTTERWAVE_TABLE', 'flutterwave_forms_payments' );
 define( 'PFF_FLUTTERWAVE_PLUGIN_BASENAME', plugin_basename(__FILE__) );
 define( 'PFF_FLUTTERWAVE_PLUGIN_NAME', 'pff-flutterwave' );

@@ -112,9 +112,19 @@ class Settings {
 	}
 
 	public function output_settings_page() {
+
+		if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
+			add_settings_error(
+				'pff_flutterwave_settings',
+				'pff_flutterwave_settings_saved',
+				esc_html__( 'Settings saved successfully.', 'pff-flutterwave' ),
+				'success'
+			);
+		}
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Flutterwave Forms Settings', 'pff-flutterwave' ); ?></h1>
+			<?php settings_errors( 'pff_flutterwave_settings' ); ?>
 			<h2><?php esc_html_e( 'API Keys Settings', 'pff-flutterwave' ); ?></h2>
 
 			<span><?php echo wp_kses_post( __( 'Get your API Keys <a href="https://dashboard.flutterwave.com/dashboard/settings/apis" target="_blank">here</a>. The Webhook Secret Hash is configured under Settings &raquo; Webhooks.', 'pff-flutterwave' ) ); ?> </span>

@@ -135,7 +135,22 @@ class Confirm_Payment {
 
 			$sendreceipt = $this->meta['sendreceipt'];
 			$decoded     = json_decode( $this->payment_meta->metadata );
-			$fullname    = isset( $decoded[1]->value ) ? $decoded[1]->value : '';
+			$fullname    = '';
+			if ( is_array( $decoded ) ) {
+				foreach ( $decoded as $item ) {
+					if ( isset( $item->variable_name ) && in_array( $item->variable_name, [ 'Full_Name', 'Full Name', 'name', 'Name' ], true ) ) {
+						$fullname = isset( $item->value ) ? $item->value : '';
+						break;
+					}
+					if ( isset( $item->display_name ) && 'Full Name' === $item->display_name ) {
+						$fullname = isset( $item->value ) ? $item->value : '';
+						break;
+					}
+				}
+			}
+			if ( '' === $fullname && isset( $this->payment_meta->name ) ) {
+				$fullname = $this->payment_meta->name;
+			}
 
 			if ( 'yes' === $sendreceipt ) {
 				do_action( 'pff_flutterwave_send_receipt',

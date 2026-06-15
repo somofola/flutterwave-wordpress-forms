@@ -112,7 +112,7 @@ class Email_Receipt extends Email {
 																printf(
 																	/* translators: %s: Customer's first name */
 																	esc_html__( 'Hello %s,', 'pff-flutterwave' ),
-																	esc_html( strstr( $this->name . ' ', ' ', true ) )
+																	esc_html( trim( $this->name ) )
 																); 
 																?>
 															</p>
