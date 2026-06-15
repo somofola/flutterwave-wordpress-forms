@@ -27,7 +27,7 @@ class Activation {
 
 		self::create_tables( $table_name );
 		self::maybe_upgrade( $table_name );
-		update_option( 'pff_flutterwave_db_version', '1.1' );
+		update_option( 'pff_flutterwave_db_version', '1.2' );
 	}
 
 	/**
@@ -47,6 +47,7 @@ class Activation {
 				txn_code_2 varchar(64) DEFAULT '' NOT NULL,
 				flw_ref varchar(64) DEFAULT '' NOT NULL,
 				transaction_id varchar(64) DEFAULT '' NOT NULL,
+				payment_type varchar(32) DEFAULT '' NOT NULL,
 				amount decimal(11,2) NOT NULL DEFAULT 0.00,
 				ip varchar(45) NOT NULL DEFAULT '',
 				deleted_at datetime DEFAULT NULL,
@@ -78,6 +79,21 @@ class Activation {
 			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY paid_at timestamp NULL DEFAULT NULL" );
 			$wpdb->query( "ALTER TABLE `{$table_name}` MODIFY modified timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" );
 			$wpdb->query( "ALTER TABLE `{$table_name}` DROP INDEX id" );
+		}
+
+		if ( version_compare( $version, '1.2', '<' ) ) {
+			$col_exists = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+					DB_NAME,
+					$table_name,
+					'payment_type'
+				)
+			);
+			if ( ! $col_exists ) {
+				$wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN payment_type varchar(32) NOT NULL DEFAULT '' AFTER transaction_id" );
+			}
+			update_option( 'pff_flutterwave_db_version', '1.2' );
 		}
 	}
 }

@@ -260,12 +260,13 @@ class Confirm_Payment {
 		$amount_paid     = isset( $data->amount ) ? floatval( $data->amount ) : 0;
 		$flutterwave_ref = isset( $data->tx_ref ) ? $data->tx_ref : $this->reference;
 		$paid_at         = isset( $data->created_at ) ? gmdate( 'Y-m-d H:i:s', strtotime( $data->created_at ) ) : current_time( 'mysql', true );
+		$payment_type    = isset( $data->payment_type ) ? substr( sanitize_text_field( $data->payment_type ), 0, 32 ) : '';
 
 		if ( 'optional' === $this->meta['recur'] || 'plan' === $this->meta['recur'] ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->update(
 				$table,
-				array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at ),
+				array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at, 'payment_type' => $payment_type ),
 				array( $this->txn_column => $flutterwave_ref )
 			);
 			$return = [
@@ -277,7 +278,7 @@ class Confirm_Payment {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$wpdb->update(
 					$table,
-					array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at ),
+					array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at, 'payment_type' => $payment_type ),
 					array( $this->txn_column => $flutterwave_ref )
 				);
 				$return = [
@@ -295,7 +296,7 @@ class Confirm_Payment {
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 					$wpdb->update(
 						$table,
-						array( 'paid' => 1, 'paid_at' => $paid_at ),
+						array( 'paid' => 1, 'paid_at' => $paid_at, 'payment_type' => $payment_type ),
 						array( $this->txn_column => $flutterwave_ref )
 					);
 					$return = [
