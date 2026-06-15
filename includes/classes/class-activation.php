@@ -27,7 +27,7 @@ class Activation {
 
 		self::create_tables( $table_name );
 		self::maybe_upgrade( $table_name );
-		update_option( 'pff_flutterwave_db_version', '1.2' );
+		update_option( 'pff_flutterwave_db_version', '1.3' );
 	}
 
 	/**
@@ -94,6 +94,24 @@ class Activation {
 				$wpdb->query( "ALTER TABLE `{$table_name}` ADD COLUMN payment_type varchar(32) NOT NULL DEFAULT '' AFTER transaction_id" );
 			}
 			update_option( 'pff_flutterwave_db_version', '1.2' );
+		}
+
+		if ( version_compare( $version, '1.3', '<' ) ) {
+			$admin_email = get_option( 'admin_email' );
+			$new_msg     = sprintf(
+				/* translators: %s: support email */
+				esc_html__( 'Thank you for your payment! A receipt has been sent to your email. If you have any questions or did not receive your receipt, contact support at %s and we will get back to you shortly.', 'pff-flutterwave' ),
+				$admin_email
+			);
+			$stale_patterns = [ 'Thank you for paying!', 'Thank you for paying' ];
+			foreach ( $stale_patterns as $stale ) {
+				$wpdb->update(
+					$wpdb->postmeta,
+					[ 'meta_value' => $new_msg ],
+					[ 'meta_key' => '_successmsg', 'meta_value' => $stale ]
+				);
+			}
+			update_option( 'pff_flutterwave_db_version', '1.3' );
 		}
 	}
 }

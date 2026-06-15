@@ -149,6 +149,12 @@ class Setup {
 			'logo'         => PFF_FLUTTERWAVE_PLUGIN_URL . '/assets/images/logo.png',
 			'sitename'     => get_bloginfo( 'name' ),
 			'confirmNonce' => wp_create_nonce( 'pff-flutterwave-confirm' ),
+			'supportEmail' => get_option( 'admin_email' ),
+			'homeUrl'      => home_url( '/' ),
+			'i18n'         => [
+				'contactSupport' => esc_html__( 'Contact Support', 'pff-flutterwave' ),
+				'goHome'         => esc_html__( 'Return Home', 'pff-flutterwave' ),
+			],
 		];
 		wp_localize_script( PFF_FLUTTERWAVE_PLUGIN_NAME . '-public', 'pffSettings', $js_args , PFF_FLUTTERWAVE_VERSION, true );
 	}

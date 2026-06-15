@@ -53,7 +53,10 @@ class Payment_History {
 		global $wpdb;
 		$payments_table = $wpdb->prefix . PFF_FLUTTERWAVE_TABLE;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
-		$payment_types = $wpdb->get_col( "SELECT DISTINCT payment_type FROM `{$payments_table}` WHERE payment_type <> '' AND deleted_at IS NULL ORDER BY payment_type ASC" );
+		$db_pts        = $wpdb->get_col( "SELECT DISTINCT payment_type FROM `{$payments_table}` WHERE payment_type <> '' AND deleted_at IS NULL ORDER BY payment_type ASC" );
+		$known_pts     = [ 'card', 'banktransfer', 'ussd', 'account', 'mobilemoneyghana', 'mobilemoneyrwanda', 'mobilemoneyuganda', 'mobilemoneyzambia', 'mpesa', 'mobilemoney' ];
+		$payment_types = array_values( array_unique( array_filter( array_merge( $db_pts, $known_pts ) ) ) );
+		sort( $payment_types );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Payment History', 'pff-flutterwave' ); ?></h1>

@@ -257,7 +257,21 @@ function PffFlutterwaveFee()
                     if (resp.result == "success2") { window.location.href = resp.link; return; }
                     var msg = resp.message || resp.error_message || "Payment processed.";
                     if (resp.result == "success") {
-                        $form.before('<div class="alert-success">' + msg + '</div>');
+                        var supportEmail = (typeof pffSettings !== "undefined" && pffSettings.supportEmail) ? pffSettings.supportEmail : "";
+                        var homeUrl      = (typeof pffSettings !== "undefined" && pffSettings.homeUrl) ? pffSettings.homeUrl : "/";
+                        var labels       = (typeof pffSettings !== "undefined" && pffSettings.i18n) ? pffSettings.i18n : { contactSupport: "Contact Support", goHome: "Return Home" };
+                        var supportHref  = supportEmail ? ("mailto:" + supportEmail + "?subject=" + encodeURIComponent("Payment support request")) : "#";
+                        var panel = '<div class="pff-success-panel" style="padding:32px 24px;text-align:center;border:2px solid #472A7A;border-radius:8px;background:#fff;max-width:560px;margin:24px auto">' +
+                            '<div style="font-size:48px;line-height:1;color:#1a7e1a;margin-bottom:12px">&#10004;</div>' +
+                            '<h3 style="color:#472A7A;margin:0 0 12px;font-size:22px">Payment Successful</h3>' +
+                            '<p style="color:#333;margin:0 0 24px;font-size:15px;line-height:1.5">' + msg + '</p>' +
+                            '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
+                                '<a href="' + supportHref + '" style="display:inline-block;padding:10px 20px;background:#F36F21;color:#fff;text-decoration:none;border-radius:4px;font-weight:600">' + labels.contactSupport + '</a>' +
+                                '<a href="' + homeUrl + '" style="display:inline-block;padding:10px 20px;background:#472A7A;color:#fff;text-decoration:none;border-radius:4px;font-weight:600">' + labels.goHome + '</a>' +
+                            '</div>' +
+                        '</div>';
+                        $form.hide();
+                        $form.before(panel);
                     } else {
                         $form.before('<div class="alert-danger">' + msg + '</div>');
                     }

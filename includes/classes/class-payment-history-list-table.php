@@ -83,8 +83,10 @@ class Payment_History_List_Table extends \WP_List_Table {
 
 		$payment_type_f = isset( $_GET['payment_type'] ) ? sanitize_text_field( wp_unslash( $_GET['payment_type'] ) ) : '';
 		if ( '' !== $payment_type_f ) {
-			$where   .= ' AND payment_type = %s';
-			$params[] = $payment_type_f;
+			$meta_like = '%' . $wpdb->esc_like( '"variable_name":"Payment Option"' ) . '%' . $wpdb->esc_like( '"value":"' . $payment_type_f . '"' ) . '%';
+			$where    .= ' AND ( payment_type = %s OR metadata LIKE %s )';
+			$params[]  = $payment_type_f;
+			$params[]  = $meta_like;
 		}
 
 		$from_date = isset( $_GET['from_date'] ) ? sanitize_text_field( wp_unslash( $_GET['from_date'] ) ) : '';
@@ -166,6 +168,21 @@ class Payment_History_List_Table extends \WP_List_Table {
 
 			case 'payment_type':
 				$pt = isset( $item->payment_type ) ? trim( $item->payment_type ) : '';
+				if ( '' === $pt && ! empty( $item->metadata ) ) {
+					$decoded = json_decode( $item->metadata );
+					if ( is_array( $decoded ) ) {
+						foreach ( $decoded as $entry ) {
+							if ( isset( $entry->variable_name ) && in_array( $entry->variable_name, [ 'Payment Option', 'Payment_Option', 'payment_option' ], true ) ) {
+								$pt = isset( $entry->value ) ? trim( $entry->value ) : '';
+								break;
+							}
+							if ( isset( $entry->display_name ) && 'Payment Option' === $entry->display_name ) {
+								$pt = isset( $entry->value ) ? trim( $entry->value ) : '';
+								break;
+							}
+						}
+					}
+				}
 				return '' !== $pt ? esc_html( ucwords( str_replace( [ '_', '-' ], ' ', $pt ) ) ) : '&mdash;';
 
 			case 'paid':
