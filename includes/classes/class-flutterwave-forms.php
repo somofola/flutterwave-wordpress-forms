@@ -137,5 +137,6 @@ final class Payment_Forms {
 	 */
 	private function init_hooks() {
 		register_activation_hook( PFF_FLUTTERWAVE_MAIN_FILE, array( '\flutterwave\payment_forms\Activation', 'install' ) );
+		add_action( 'plugins_loaded', array( '\flutterwave\payment_forms\Activation', 'maybe_run_upgrades' ) );
 	}
 }

@@ -266,9 +266,10 @@ class Confirm_Payment {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->update(
 				$table,
-				array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at, 'payment_type' => $payment_type ),
+				array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at ),
 				array( $this->txn_column => $flutterwave_ref )
 			);
+			$this->maybe_set_payment_type( $table, $flutterwave_ref, $payment_type );
 			$return = [
 				'message' => $this->meta['successmsg'],
 				'result'  => 'success',
@@ -278,9 +279,10 @@ class Confirm_Payment {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$wpdb->update(
 					$table,
-					array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at, 'payment_type' => $payment_type ),
+					array( 'paid' => 1, 'amount' => $amount_paid, 'paid_at' => $paid_at ),
 					array( $this->txn_column => $flutterwave_ref )
 				);
+				$this->maybe_set_payment_type( $table, $flutterwave_ref, $payment_type );
 				$return = [
 					'message' => $this->meta['successmsg'],
 					'result'  => 'success',
@@ -296,9 +298,10 @@ class Confirm_Payment {
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 					$wpdb->update(
 						$table,
-						array( 'paid' => 1, 'paid_at' => $paid_at, 'payment_type' => $payment_type ),
+						array( 'paid' => 1, 'paid_at' => $paid_at ),
 						array( $this->txn_column => $flutterwave_ref )
 					);
+					$this->maybe_set_payment_type( $table, $flutterwave_ref, $payment_type );
 					$return = [
 						'message' => $this->meta['successmsg'],
 						'result'  => 'success',
@@ -307,6 +310,36 @@ class Confirm_Payment {
 			}
 		}
 		return $return;
+	}
+
+	/**
+	 * Best-effort set of payment_type column. Silently no-ops if column missing
+	 * (older DB schema before 1.2 migration ran). Keeps paid-status update from
+	 * failing when this column is absent.
+	 */
+	protected function maybe_set_payment_type( $table, $flutterwave_ref, $payment_type ) {
+		if ( '' === $payment_type ) {
+			return;
+		}
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$col_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+				DB_NAME,
+				$table,
+				'payment_type'
+			)
+		);
+		if ( ! $col_exists ) {
+			return;
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$table,
+			[ 'payment_type' => $payment_type ],
+			[ $this->txn_column => $flutterwave_ref ]
+		);
 	}
 
 	protected function maybe_create_subscription() {

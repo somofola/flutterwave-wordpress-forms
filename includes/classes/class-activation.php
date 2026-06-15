@@ -27,7 +27,7 @@ class Activation {
 
 		self::create_tables( $table_name );
 		self::maybe_upgrade( $table_name );
-		update_option( 'pff_flutterwave_db_version', '1.3' );
+		update_option( 'pff_flutterwave_db_version', '1.4' );
 	}
 
 	/**
@@ -96,22 +96,43 @@ class Activation {
 			update_option( 'pff_flutterwave_db_version', '1.2' );
 		}
 
-		if ( version_compare( $version, '1.3', '<' ) ) {
+		if ( version_compare( $version, '1.4', '<' ) ) {
 			$admin_email = get_option( 'admin_email' );
 			$new_msg     = sprintf(
 				/* translators: %s: support email */
 				esc_html__( 'Thank you for your payment! A receipt has been sent to your email. If you have any questions or did not receive your receipt, contact support at %s and we will get back to you shortly.', 'pff-flutterwave' ),
 				$admin_email
 			);
-			$stale_patterns = [ 'Thank you for paying!', 'Thank you for paying' ];
-			foreach ( $stale_patterns as $stale ) {
-				$wpdb->update(
-					$wpdb->postmeta,
-					[ 'meta_value' => $new_msg ],
-					[ 'meta_key' => '_successmsg', 'meta_value' => $stale ]
-				);
-			}
-			update_option( 'pff_flutterwave_db_version', '1.3' );
+			$like = $wpdb->esc_like( 'Thank you for paying' ) . '%';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE `{$wpdb->postmeta}` SET meta_value = %s WHERE meta_key = %s AND meta_value LIKE %s",
+					$new_msg,
+					'_successmsg',
+					$like
+				)
+			);
+			update_option( 'pff_flutterwave_db_version', '1.4' );
 		}
+	}
+
+	/**
+	 * Idempotent upgrade runner — called on every request via plugins_loaded.
+	 * Cheap: short-circuits when db_version already current.
+	 */
+	public static function maybe_run_upgrades() {
+		global $wpdb;
+		$current_target = '1.4';
+		$installed      = get_option( 'pff_flutterwave_db_version', '1.0' );
+		if ( version_compare( $installed, $current_target, '>=' ) ) {
+			return;
+		}
+		$table_name = $wpdb->prefix . PFF_FLUTTERWAVE_TABLE;
+		if ( ! function_exists( 'dbDelta' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		}
+		self::create_tables( $table_name );
+		self::maybe_upgrade( $table_name );
 	}
 }
