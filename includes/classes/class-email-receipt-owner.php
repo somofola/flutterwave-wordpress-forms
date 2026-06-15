@@ -75,7 +75,10 @@ class Email_Receipt_Owner extends Email {
 					<table class="header" width="100%" border="0" cellspacing="0" cellpadding="0" style="border-spacing:0;mso-table-lspace:0;mso-table-rspace:0">
 						<tbody>
 							<tr>
-								<td class="header_cell col-bottom-0" align="center" valign="top" style="padding:0;text-align:center;padding-bottom:16px;border-top:4px solid;border-bottom:0 solid;background-color:#fff;border-left:4px solid;border-right:4px solid;border-color:#d8dde4;font-size:0!important">
+								<td class="header_cell col-bottom-0" align="center" valign="top" style="padding:24px 16px;text-align:center;border-top:4px solid #472A7A;border-bottom:4px solid #F36F21;background-color:#ffffff;border-left:4px solid #472A7A;border-right:4px solid #472A7A;font-size:0!important">
+									<a href="<?php echo esc_url( get_bloginfo( 'url' ) ); ?>" style="text-decoration:none;display:inline-block">
+										<img src="https://nemmtech.com/wp-content/uploads/2021/12/NEMTECH-Academy-Logo-light-bg.png" alt="<?php echo esc_attr( get_option( 'blogname' ) ); ?>" width="180" style="max-width:180px;height:auto;display:block;border:0;outline:none;text-decoration:none">
+									</a>
 								</td>
 							</tr>
 						</tbody>
@@ -91,7 +94,7 @@ class Email_Receipt_Owner extends Email {
 													<tr>
 														<td class="column_cell font_default" align="center" valign="top" style="padding:16px;font-family:Helvetica,Arial,sans-serif;font-size:15px;text-align:center;vertical-align:top;color:#888">
 															<p style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;margin-top:16px;margin-bottom:24px">&nbsp;</p>
-															<h5 style="font-family:Helvetica,Arial,sans-serif;margin-left:0;margin-right:0;margin-top:16px;margin-bottom:8px;padding:0;font-size:18px;line-height:26px;font-weight:bold;color:#383d42"><?php esc_html_e( 'You just received a payment', 'pff-flutterwave' ); ?></h5>
+															<h5 style="font-family:Helvetica,Arial,sans-serif;margin-left:0;margin-right:0;margin-top:16px;margin-bottom:8px;padding:0;font-size:18px;line-height:26px;font-weight:bold;color:#472A7A"><?php esc_html_e( 'You just received a payment', 'pff-flutterwave' ); ?></h5>
 														</td>
 													</tr>
 												</tbody>
@@ -121,7 +124,7 @@ class Email_Receipt_Owner extends Email {
 																		<td class="hspace" style="padding:0;font-size:0;height:8px;overflow:hidden">&nbsp;</td>
 																	</tr>
 																	<tr>
-																		<td class="font_default" style="padding:3px 7px;font-family:Helvetica,Arial,sans-serif;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;-webkit-border-radius:2px;border-radius:2px;white-space:nowrap;background-color:#666;color:#fff">
+																		<td class="font_default" style="padding:3px 7px;font-family:Helvetica,Arial,sans-serif;font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;-webkit-border-radius:2px;border-radius:2px;white-space:nowrap;background-color:#F36F21;color:#fff">
 																			<?php esc_html_e( 'Payment Details', 'pff-flutterwave' ); ?>
 																		</td>
 																	</tr>
@@ -173,7 +176,7 @@ class Email_Receipt_Owner extends Email {
 													<tr>
 														<td class="column_cell font_default" align="center" valign="top" style="padding:16px 16px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;text-align:center;vertical-align:top;color:#888">
 															<small style="font-size:86%;font-weight:normal"><strong><?php echo esc_html__( 'Notice', 'pff-flutterwave' ); ?></strong><br>
-															<?php echo esc_html__( 'You\'re getting this email because someone made a payment of', 'pff-flutterwave' ); ?> <?php echo esc_html( $this->currency . ' ' . number_format( $this->amount ) ); ?> <?php echo esc_html__( 'to', 'pff-flutterwave' ); ?> <a href="<?php echo esc_html( get_bloginfo( 'url' ) ); ?>" style="display:inline-block;text-decoration:none;font-family:Helvetica,Arial,sans-serif;color:#2f68b4"><?php echo esc_html( get_option( 'blogname' ) ); ?></a>.</small>
+															<?php echo esc_html__( 'You\'re getting this email because someone made a payment of', 'pff-flutterwave' ); ?> <?php echo esc_html( $this->currency . ' ' . number_format( $this->amount ) ); ?> <?php echo esc_html__( 'to', 'pff-flutterwave' ); ?> <a href="<?php echo esc_html( get_bloginfo( 'url' ) ); ?>" style="display:inline-block;text-decoration:none;font-family:Helvetica,Arial,sans-serif;color:#472A7A;font-weight:bold"><?php echo esc_html( get_option( 'blogname' ) ); ?></a>.</small>
 														</td>
 													</tr>
 												</tbody>

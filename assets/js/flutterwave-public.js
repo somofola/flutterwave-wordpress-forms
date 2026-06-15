@@ -111,14 +111,22 @@ function PffFlutterwaveFee()
 
         // Flatten custom fields into a meta object — Flutterwave v3 wants meta as a
         // flat key/value bag, not Paystack's metadata.custom_fields array.
+        // Flutterwave's events tracker rejects keys/values containing '.', so sanitize.
+        function sanitizeKey(k) { return String(k).replace(/[^A-Za-z0-9_]/g, "_"); }
+        function sanitizeVal(v) { return (v === undefined || v === null) ? "" : String(v).replace(/\./g, "_"); }
+
         var meta = {};
         if (Array.isArray(data.custom_fields)) {
             data.custom_fields.forEach(function (f) {
                 if (f && f.variable_name) {
-                    meta[f.variable_name] = (f.value === undefined ? "" : f.value);
+                    meta[sanitizeKey(f.variable_name)] = sanitizeVal(f.value);
                 }
             });
         }
+
+        // Build a dot-free consumer id from tx_ref so the inline events tracker doesn't
+        // fall back to email (which contains dots and triggers "customer.id must not contain '.'").
+        var safeConsumerId = String(data.code || "").replace(/\./g, "_");
 
         var hasSubaccount = data.subaccount && data.subaccount !== "null" && data.subaccount !== "";
 
@@ -127,19 +135,26 @@ function PffFlutterwaveFee()
             tx_ref:      data.code,
             amount:      Number(data.total),
             currency:    data.currency || "NGN",
+            redirect_url: window.location.href.split("?")[0],
             payment_options: "card, banktransfer, ussd, account, mobilemoneyghana, mobilemoneyrwanda, mobilemoneyuganda, mobilemoneyzambia",
             customer: {
+                id: safeConsumerId,
                 email: data.email,
-                phone_number: meta.phone_number || meta.phone || "",
-                name: (firstName + " " + lastName).trim()
+                phone_number: String(meta.phone_number || meta.phone || "").replace(/\./g, ""),
+                name: (firstName + " " + lastName).trim().replace(/\./g, "")
             },
             customizations: {
-                title:       data.title || pffSettings.sitename || "Payment",
-                description: data.description || "",
+                title:       String(data.title || pffSettings.sitename || "Payment").replace(/\./g, " "),
+                description: String(data.description || "").replace(/\./g, " "),
                 logo:        data.logo || pffSettings.logo
             },
             meta: meta,
             callback: function (response) {
+                // Flutterwave Inline does NOT auto-close after callback — must do it here.
+                if (typeof window.closePaymentModal === "function") {
+                    window.closePaymentModal();
+                }
+
                 // Flutterwave's inline callback fires with { transaction_id, tx_ref, status, ... }
                 if (!response || response.status !== "successful") {
                     self.before('<div class="alert-danger">Payment was not successful.</div>');
@@ -210,6 +225,48 @@ function PffFlutterwaveFee()
     var amountField;
 
     $(document).ready(function () {
+
+        // Handle Flutterwave redirect return — async methods (bank transfer/account/ussd)
+        // dismiss the inline modal by redirecting back to redirect_url with these params.
+        (function handleFlutterwaveReturn() {
+            var params = new URLSearchParams(window.location.search);
+            var status = params.get("status");
+            var txRef  = params.get("tx_ref");
+            var txnId  = params.get("transaction_id");
+            if (!status || !txRef) { return; }
+
+            var $form = $(".flutterwave-form").first();
+            if (!$form.length) { return; }
+
+            if (status !== "successful" && status !== "completed") {
+                $form.before('<div class="alert-danger">Payment was not completed.</div>');
+                history.replaceState(null, "", window.location.pathname);
+                return;
+            }
+
+            $.blockUI({ message: "Verifying payment..." });
+            $.post($form.attr("action"), {
+                action:         "pff_flutterwave_confirm_payment",
+                code:           txRef,
+                transaction_id: txnId,
+                nonce:          (typeof pffSettings !== "undefined" && pffSettings.confirmNonce) ? pffSettings.confirmNonce : ""
+            }, function (newdata) {
+                $.unblockUI();
+                try {
+                    var resp = JSON.parse(newdata);
+                    if (resp.result == "success2") { window.location.href = resp.link; return; }
+                    var msg = resp.message || resp.error_message || "Payment processed.";
+                    if (resp.result == "success") {
+                        $form.before('<div class="alert-success">' + msg + '</div>');
+                    } else {
+                        $form.before('<div class="alert-danger">' + msg + '</div>');
+                    }
+                } catch (e) {
+                    $form.before('<div class="alert-danger">Verification response invalid.</div>');
+                }
+                history.replaceState(null, "", window.location.pathname);
+            });
+        })();
 
         if ($("#pf-vamount").length) {
             amountField = $("#pf-vamount");

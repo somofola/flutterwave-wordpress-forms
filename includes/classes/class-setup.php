@@ -25,6 +25,7 @@ class Setup {
 		add_action( 'plugin_action_links_' . PFF_FLUTTERWAVE_PLUGIN_BASENAME, [ $this, 'add_action_links' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'admin_enqueue_styles' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'admin_enqueue_scripts' ] );
+		add_action( 'admin_head', [ $this, 'admin_menu_icon_style' ] );
 
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_scripts' ] );
@@ -73,6 +74,13 @@ class Setup {
 		];
         register_post_type( 'flutterwave_form', $args );
     }
+
+	/**
+	 * Constrain admin menu icon size so the logo doesn't overflow the sidebar.
+	 */
+	public function admin_menu_icon_style() {
+		echo '<style>#adminmenu #menu-posts-flutterwave_form .wp-menu-image img{width:20px;height:20px;padding:7px 0 0;object-fit:contain;}</style>';
+	}
 
 	/**
 	 * Load the plugin text domain for translation.
@@ -136,10 +144,11 @@ class Setup {
 
 		$helpers = new Helpers();
 		$js_args = [
-			'key'      => $helpers->get_public_key(),
-			'fee'      => $helpers->get_fees(),
-			'logo'     => PFF_FLUTTERWAVE_PLUGIN_URL . '/assets/images/logo.png',
-			'sitename' => get_bloginfo( 'name' ),
+			'key'          => $helpers->get_public_key(),
+			'fee'          => $helpers->get_fees(),
+			'logo'         => PFF_FLUTTERWAVE_PLUGIN_URL . '/assets/images/logo.png',
+			'sitename'     => get_bloginfo( 'name' ),
+			'confirmNonce' => wp_create_nonce( 'pff-flutterwave-confirm' ),
 		];
 		wp_localize_script( PFF_FLUTTERWAVE_PLUGIN_NAME . '-public', 'pffSettings', $js_args , PFF_FLUTTERWAVE_VERSION, true );
 	}

@@ -599,7 +599,13 @@ class Forms_Update {
 	 */
 	public function save_post_meta( $form_id, $post ) {
 
-		$screen = get_current_screen();
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/screen.php';
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( null === $screen && isset( $post->post_type ) && 'flutterwave_form' === $post->post_type ) {
+			$screen = (object) [ 'post_type' => 'flutterwave_form' ];
+		}
 		if ( null !== $screen && isset( $screen->post_type ) && 'flutterwave_form' === $screen->post_type ) {
 			$this->is_screen = true;
 

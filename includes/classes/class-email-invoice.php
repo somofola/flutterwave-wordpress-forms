@@ -83,8 +83,11 @@ class Email_Invoice extends Email {
 											<table class="column" width="100%" border="0" cellspacing="0" cellpadding="0" style="border-spacing:0;mso-table-lspace:0;mso-table-rspace:0;width:100%;vertical-align:top">
 												<tbody>
 													<tr>
-														<td class="column_cell font_default" align="center" valign="top" style="padding:16px;font-family:Helvetica,Arial,sans-serif;font-size:20px;text-align:left;vertical-align:top;color:#ffb26b;font-weight:bold;padding-bottom:0;padding-top:16px">
-														</td>
+														<td class="column_cell font_default" align="center" valign="top" style="padding:16px;font-family:Helvetica,Arial,sans-serif;font-size:20px;text-align:center;vertical-align:top;color:#472A7A;font-weight:bold;padding-bottom:0;padding-top:16px">
+														<a href="<?php echo esc_url( get_bloginfo( 'url' ) ); ?>" style="text-decoration:none;display:inline-block">
+															<img src="https://nemmtech.com/wp-content/uploads/2021/12/NEMTECH-Academy-Logo-light-bg.png" alt="<?php echo esc_attr( get_option( 'blogname' ) ); ?>" width="180" style="max-width:180px;height:auto;display:block;border:0;outline:none;text-decoration:none;margin:0 auto">
+														</a>
+													</td>
 													</tr>
 												</tbody>
 											</table>
@@ -105,7 +108,7 @@ class Email_Invoice extends Email {
 													<tr>
 														<td class="column_cell font_default" align="center" valign="top" style="padding:16px;font-family:Helvetica,Arial,sans-serif;font-size:15px;text-align:center;vertical-align:top;color:#888">
 															<p style="font-family:Helvetica,Arial,sans-serif;font-size:28px;line-height:23px;margin-top:16px;margin-bottom:24px"><small class="text-muted" style="font-size:86%;font-weight:normal;color:#b3b3b5">
-																	<a href="#" style="display:inline-block;text-decoration:none;font-family:Helvetica,Arial,sans-serif;color:#ffb26b"><strong class="text-muted" style="color:#b3b3b5"><?php echo esc_html__( 'Invoice', 'pff-flutterwave' ); ?> #<?php echo esc_html( $this->code ); ?></strong></a></p>
+																	<a href="#" style="display:inline-block;text-decoration:none;font-family:Helvetica,Arial,sans-serif;color:#F36F21"><strong class="text-muted" style="color:#b3b3b5"><?php echo esc_html__( 'Invoice', 'pff-flutterwave' ); ?> #<?php echo esc_html( $this->code ); ?></strong></a></p>
 														</td>
 													</tr>
 												</tbody>
@@ -139,7 +142,7 @@ class Email_Invoice extends Email {
 												<tbody>
 													<tr>
 														<td class="column_cell font_default" align="left" valign="top" style="padding:16px 16px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;text-align:center;vertical-align:top;color:#888">
-															<h1 style="font-family:Helvetica,Arial,sans-serif;margin-left:0;margin-right:0;margin-top:16px;margin-bottom:8px;padding:0;font-size:26px;line-height:36px;font-weight:bold;color:#ffb26b"><?php echo esc_html( $this->currency ) . ' ' . number_format( $this->amount ); ?></h1>
+															<h1 style="font-family:Helvetica,Arial,sans-serif;margin-left:0;margin-right:0;margin-top:16px;margin-bottom:8px;padding:0;font-size:26px;line-height:36px;font-weight:bold;color:#F36F21"><?php echo esc_html( $this->currency ) . ' ' . number_format( $this->amount ); ?></h1>
 														</td>
 													</tr>
 												</tbody>
