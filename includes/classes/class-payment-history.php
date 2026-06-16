@@ -22,13 +22,16 @@ class Payment_History {
 			'edit.php?post_type=flutterwave_form',
 			esc_html__( 'Payment History', 'pff-flutterwave' ),
 			esc_html__( 'Payment History', 'pff-flutterwave' ),
-			'edit_posts',
+			'manage_options',
 			'payment-history',
 			[ $this, 'render_page' ]
 		);
 	}
 
 	public function render_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view payment history.', 'pff-flutterwave' ), '', array( 'response' => 403 ) );
+		}
 		self::load_list_table_class();
 
 		$table = new Payment_History_List_Table();

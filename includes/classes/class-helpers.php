@@ -191,49 +191,24 @@ class Helpers {
         $table = esc_sql( $wpdb->prefix . PFF_FLUTTERWAVE_TABLE );
 		$order = strtoupper( $args['order'] );
 
-		$current_version = get_bloginfo('version');
-		if ( version_compare( '6.2', $current_version, '<=' ) ) {
-
-			// Make sure $order only handles 2 possible values.
-			if ( 'ASC' !== $order ) {
-				$order = 'DESC';
-			}
-
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$results = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * 
-					FROM %i 
-					WHERE post_id = %d 
-					AND paid = %s
-					ORDER BY %i $order",
-					$table,
-					$form_id,
-					$args['paid'],
-					$args['orderby']
-				)
-			);
-			// phpcs:enable -- Stop ignoring
-
-		} else {
-
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$results = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * 
-					FROM `%s` 
-					WHERE post_id = '%d'
-					AND paid = '%s'
-					ORDER BY '%s' %s",
-					$table,
-					$form_id,
-					$args['paid'],
-					$args['orderby'],
-					$order
-				)
-			);
-			// phpcs:enable -- Stop ignoring
+		// Whitelist sort direction.
+		if ( 'ASC' !== $order ) {
+			$order = 'DESC';
 		}
+
+		// Whitelist sortable columns.
+		$allowed_orderby = array( 'created_at', 'paid_at', 'id', 'amount', 'email' );
+		$orderby         = in_array( $args['orderby'], $allowed_orderby, true ) ? $args['orderby'] : 'created_at';
+
+		// phpcs:disable WordPress.DB
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM `{$table}` WHERE post_id = %d AND paid = %s ORDER BY `{$orderby}` {$order}",
+				$form_id,
+				$args['paid']
+			)
+		);
+		// phpcs:enable
 
 		return $results;
 	}
@@ -250,35 +225,15 @@ class Helpers {
 		$num   = wp_cache_get( 'form_payments_' . $form_id, 'pff_flutterwave' );
 		if ( false === $num ) {
 
-			$current_version = get_bloginfo('version');
-			if ( version_compare( '6.2', $current_version, '<=' ) ) {
-	
-				// phpcs:disable WordPress.DB -- Start ignoring
-				$num = $wpdb->get_var(
-					$wpdb->prepare(
-						"SELECT COUNT(*)
-						FROM %i
-						WHERE post_id = %d
-						AND paid = '1'",
-						$table,
-						$form_id
-					)
-				);
-				// phpcs:enable -- Stop ignoring
-			} else {
-				// phpcs:disable WordPress.DB -- Start ignoring
-				$num = $wpdb->get_var(
-					$wpdb->prepare(
-						"SELECT COUNT(*)
-						FROM `%s`
-						WHERE post_id = '%d'
-						AND paid = '1'",
-						$table,
-						$form_id
-					)
-				);
-				// phpcs:enable -- Stop ignoring
-			}
+			$table = esc_sql( $table );
+			// phpcs:disable WordPress.DB
+			$num = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM `{$table}` WHERE post_id = %d AND paid = '1'",
+					$form_id
+				)
+			);
+			// phpcs:enable
 
 			wp_cache_set( 'form_payments_' . $form_id, $num, 'pff_flutterwave', 60*5 );
 		}
@@ -637,36 +592,24 @@ class Helpers {
 	public function get_db_record( $code, $column = 'txn_code' ) {
 		global $wpdb;
 		$return = false;
-		$table  = esc_sql( $wpdb->prefix . PFF_FLUTTERWAVE_TABLE );
 
-		$current_version = get_bloginfo('version');
-		if ( version_compare( '6.2', $current_version, '<=' ) ) {
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$record = $wpdb->get_results(
-				$wpdb->prepare(
-						"SELECT * 
-						FROM %i 
-						WHERE %i = %s"
-					,
-					$table,
-					$column,
-					$code
-				), 'OBJECT' );
-			// phpcs:enable -- Stop ignoring
-		} else {
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$record = $wpdb->get_results(
-				$wpdb->prepare(
-						"SELECT * 
-						FROM `%s`
-						WHERE '%s' = '%s'"
-					,
-					$table,
-					$column,
-					$code
-				), 'OBJECT' );
-			// phpcs:enable -- Stop ignoring
+		// Whitelist the column name — never interpolate a caller-supplied identifier.
+		$allowed_columns = array( 'txn_code', 'txn_code_2' );
+		if ( ! in_array( $column, $allowed_columns, true ) ) {
+			$column = 'txn_code';
 		}
+
+		$table = esc_sql( $wpdb->prefix . PFF_FLUTTERWAVE_TABLE );
+
+		// phpcs:disable WordPress.DB
+		$record = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM `{$table}` WHERE `{$column}` = %s",
+				$code
+			),
+			'OBJECT'
+		);
+		// phpcs:enable
 
 		if ( ! empty( $record ) && isset( $record[0] ) ) {
 			$return = $record[0];
@@ -835,21 +778,46 @@ class Helpers {
 	}
 
 	/**
+	 * Generate an HMAC signature for a retry-invoice code so the retry URL
+	 * cannot be enumerated against the DB by random visitors.
+	 *
+	 * @param string $code
+	 * @return string
+	 */
+	public function make_retry_token( $code ) {
+		return hash_hmac( 'sha256', (string) $code, wp_salt( 'auth' ) );
+	}
+
+	/**
+	 * Constant-time verify a retry signature against a code.
+	 *
+	 * @param string $code
+	 * @param string $sig
+	 * @return bool
+	 */
+	public function verify_retry_token( $code, $sig ) {
+		if ( ! is_string( $sig ) || '' === $sig ) {
+			return false;
+		}
+		return hash_equals( $this->make_retry_token( $code ), $sig );
+	}
+
+	/**
 	 * Generate a new Flutterwave code.
 	 *
 	 * @param int $length Length of the code to generate. Default 10.
 	 * @return string Generated code.
 	 */
 	public function generate_new_code( $length = 10 ) {
-		$characters        = '06EFGHI9KL' . time() . 'MNOPJRSUVW01YZ923234' . time() . 'ABCD5678QXT';
-		$characters_length = strlen( $characters );
-		$random_string     = '';
-
-		for ( $i = 0; $i < $length; $i++ ) {
-			$random_string .= $characters[ wp_rand( 0, $characters_length - 1 ) ];
+		// Use a CSPRNG so the tx_ref cannot be predicted or enumerated.
+		try {
+			$random_string = substr( bin2hex( random_bytes( (int) ceil( $length / 2 ) ) ), 0, $length );
+		} catch ( \Exception $e ) {
+			// random_bytes() will throw only if no CSPRNG is available — fall back to wp_generate_uuid4().
+			$random_string = substr( str_replace( '-', '', wp_generate_uuid4() ), 0, $length );
 		}
 
-		return time() . '_' . $random_string;
+		return time() . '_' . strtoupper( $random_string );
 	}
 
 	/**
@@ -864,28 +832,14 @@ class Helpers {
 		$table = esc_sql( $wpdb->prefix . PFF_FLUTTERWAVE_TABLE );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
-		$current_version = get_bloginfo('version');
-		if ( version_compare( '6.2', $current_version, '<=' ) ) {
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$o_exist = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM %i WHERE txn_code = %s",
-					$table,
-					$code
-				)
-			);
-			// phpcs:enable -- Stop ignoring
-		} else {
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$o_exist = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM `%s` WHERE txn_code = %s",
-					$table,
-					$code
-				)
-			);
-			// phpcs:enable -- Stop ignoring
-		}
+		// phpcs:disable WordPress.DB
+		$o_exist = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM `{$table}` WHERE txn_code = %s",
+				$code
+			)
+		);
+		// phpcs:enable
 
 		return ( count( $o_exist ) > 0 );
 	}

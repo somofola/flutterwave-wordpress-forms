@@ -200,9 +200,27 @@ class Form_Shortcode {
 	 * @return void
 	 */
 	public function get_code() {
-		// We ignore this as we are not performing any update action with the data 
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$code = isset( $_GET['code'] ) ? sanitize_text_field( wp_unslash( $_GET['code'] ) ) : '';
+		if ( '' === $code ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$sig = isset( $_GET['sig'] ) ? sanitize_text_field( wp_unslash( $_GET['sig'] ) ) : '';
+
+		$helpers = Helpers::get_instance();
+		if ( ! $helpers->verify_retry_token( $code, $sig ) ) {
+			// Allow logged-in record owner to bypass signature requirement.
+			if ( ! is_user_logged_in() ) {
+				return '';
+			}
+			$record = $helpers->get_db_record( $code );
+			if ( false === $record || (int) $record->user_id !== get_current_user_id() || 0 === (int) $record->user_id ) {
+				return '';
+			}
+		}
+
 		return $code;
 	}
 
@@ -534,7 +552,8 @@ class Form_Shortcode {
 			$html[] = '<form action="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" method="post" enctype="multipart/form-data" class="j-forms retry-form" id="pf-form" novalidate="">';
 
 			$html[] = '<input type="hidden" name="action" value="pff_flutterwave_retry_action">';
-			$html[] = '<input type="hidden" name="code" value="' . esc_html( $code ) . '" />';
+			$html[] = '<input type="hidden" name="code" value="' . esc_attr( $code ) . '" />';
+			$html[] = '<input type="hidden" name="sig" value="' . esc_attr( $this->helpers->make_retry_token( $code ) ) . '" />';
 			$html[] = wp_nonce_field( 'pff-flutterwave-retry', 'pf-nonce', true, false );
 
 			$html[] = '<div class="content">';

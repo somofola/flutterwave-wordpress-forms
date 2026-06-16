@@ -59,9 +59,10 @@ class Submissions {
 						<?php esc_html_e( 'All payments made for this form', 'pff-flutterwave' ); ?>
 					</p>
 					<?php if ( $data > 0 ) { ?>
-						<form action="<?php echo esc_html( admin_url( 'admin-post.php' ) ); ?>" method="post">
+						<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 							<input type="hidden" name="action" value="pff_flutterwave_export_excel">
-							<input type="hidden" name="form_id" value="<?php echo esc_html( $form_id ); ?>">
+							<input type="hidden" name="form_id" value="<?php echo esc_attr( $form_id ); ?>">
+							<?php wp_nonce_field( 'pff_flutterwave_export_excel', 'pff_export_nonce' ); ?>
 							<button type="submit" class="button button-primary button-hero load-customize"><?php esc_html_e( 'Export Data to Excel', 'pff-flutterwave' ); ?></button>
 						</form>
 					<?php } ?>
@@ -98,6 +99,11 @@ class Submissions {
 	 * @return string
 	 */
 	public function prep_csv_data( $item ) {
+		$item = (string) $item;
+		// Neutralize CSV formula injection: prefix dangerous leading chars with a tab.
+		if ( '' !== $item && in_array( $item[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
+			$item = "'" . $item;
+		}
 		return '"' . str_replace( '"', '""', $item ) . '"';
 	}
 	
@@ -109,14 +115,23 @@ class Submissions {
 	public function export_excel() {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to export payment data.', 'pff-flutterwave' ), '', array( 'response' => 403 ) );
+		}
+
+		if ( ! isset( $_POST['pff_export_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['pff_export_nonce'] ) ), 'pff_flutterwave_export_excel' ) ) {
+			wp_die( esc_html__( 'Security check failed.', 'pff-flutterwave' ), '', array( 'response' => 403 ) );
+		}
+
 		if ( ! isset( $_POST['form_id'] ) || empty( $_POST['form_id'] ) ) {
 			return;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$form_id    = sanitize_text_field( wp_unslash( $_POST['form_id'] ) );
+		$form_id    = absint( wp_unslash( $_POST['form_id'] ) );
 		$obj        = get_post( $form_id );
+		if ( ! $obj || 'flutterwave_form' !== get_post_type( $obj ) ) {
+			wp_die( esc_html__( 'Invalid form.', 'pff-flutterwave' ), '', array( 'response' => 404 ) );
+		}
 		$csv_output = '';
 		$currency   = get_post_meta( $form_id, '_currency', true );
 

@@ -96,7 +96,7 @@ class Settings {
 	 * Registers our settings sub page under the Flutterwave Forms menu item.
 	 */
 	public function register_settings_page() {
-		add_submenu_page( 'edit.php?post_type=flutterwave_form', esc_html__( 'Settings', 'pff-flutterwave' ), esc_html__( 'Settings', 'pff-flutterwave' ), 'edit_posts', 'settings', [ $this, 'output_settings_page' ] );
+		add_submenu_page( 'edit.php?post_type=flutterwave_form', esc_html__( 'Settings', 'pff-flutterwave' ), esc_html__( 'Settings', 'pff-flutterwave' ), 'manage_options', 'settings', [ $this, 'output_settings_page' ] );
 	}
 
 	/**

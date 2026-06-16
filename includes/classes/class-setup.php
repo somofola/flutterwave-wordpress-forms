@@ -129,8 +129,24 @@ class Setup {
 	 */
 	public function enqueue_scripts() {
 
-		$page_content = get_the_content();
-		if ( ! has_shortcode( $page_content, 'pff-flutterwave' ) && ! has_shortcode( $page_content, 'flutterwave_form' ) ) {
+		// Only emit the Flutterwave public key / config when the current singular
+		// post actually contains a payment-form shortcode. Falls back to global $post
+		// (get_the_content() is unreliable on archives and template parts).
+		$has_form = false;
+		if ( is_singular() ) {
+			$post_obj = get_post();
+			if ( $post_obj && ( has_shortcode( $post_obj->post_content, 'pff-flutterwave' ) || has_shortcode( $post_obj->post_content, 'flutterwave_form' ) ) ) {
+				$has_form = true;
+			}
+		}
+
+		/**
+		 * Filter whether the Flutterwave frontend assets should load on this request.
+		 * Lets themes / page builders opt-in when the shortcode lives outside post_content.
+		 */
+		$has_form = apply_filters( 'pff_flutterwave_enqueue_assets', $has_form );
+
+		if ( ! $has_form ) {
 			return;
 		}
 

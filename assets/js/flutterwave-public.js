@@ -86,6 +86,15 @@ function PffFlutterwaveFee()
 (function ($) {
     "use strict";
 
+    function pffEscapeHtml(str) {
+        return String(str == null ? "" : str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
     /**
      * Build the FlutterwaveCheckout config and launch the modal.
      *
@@ -189,7 +198,7 @@ function PffFlutterwaveFee()
                                 { scrollTop: $(".flutterwave-form").offset().top - 110 },
                                 500
                             );
-                            self.before('<div class="alert-success">' + resp.message + '</div>');
+                            self.before('<div class="alert-success">' + pffEscapeHtml(resp.message) + '</div>');
                             $form.find("input, select, textarea").each(function () {
                                 $(this).css({ "border-color": "#d1d1d1", "background-color": "#fff" });
                             });
@@ -197,7 +206,7 @@ function PffFlutterwaveFee()
                             $.unblockUI();
                         }
                     } else {
-                        self.before('<div class="alert-' + (isRetry ? 'danger' : 'danger') + '">' + resp.message + '</div>');
+                        self.before('<div class="alert-' + (isRetry ? 'danger' : 'danger') + '">' + pffEscapeHtml(resp.message) + '</div>');
                         $.unblockUI();
                     }
                 });
@@ -264,16 +273,16 @@ function PffFlutterwaveFee()
                         var panel = '<div class="pff-success-panel" style="padding:32px 24px;text-align:center;border:2px solid #472A7A;border-radius:8px;background:#fff;max-width:560px;margin:24px auto">' +
                             '<div style="font-size:48px;line-height:1;color:#1a7e1a;margin-bottom:12px">&#10004;</div>' +
                             '<h3 style="color:#472A7A;margin:0 0 12px;font-size:22px">Payment Successful</h3>' +
-                            '<p style="color:#333;margin:0 0 24px;font-size:15px;line-height:1.5">' + msg + '</p>' +
+                            '<p style="color:#333;margin:0 0 24px;font-size:15px;line-height:1.5">' + pffEscapeHtml(msg) + '</p>' +
                             '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
-                                '<a href="' + supportHref + '" style="display:inline-block;padding:10px 20px;background:#F36F21;color:#fff;text-decoration:none;border-radius:4px;font-weight:600">' + labels.contactSupport + '</a>' +
-                                '<a href="' + homeUrl + '" style="display:inline-block;padding:10px 20px;background:#472A7A;color:#fff;text-decoration:none;border-radius:4px;font-weight:600">' + labels.goHome + '</a>' +
+                                '<a href="' + pffEscapeHtml(supportHref) + '" style="display:inline-block;padding:10px 20px;background:#F36F21;color:#fff;text-decoration:none;border-radius:4px;font-weight:600">' + pffEscapeHtml(labels.contactSupport) + '</a>' +
+                                '<a href="' + pffEscapeHtml(homeUrl) + '" style="display:inline-block;padding:10px 20px;background:#472A7A;color:#fff;text-decoration:none;border-radius:4px;font-weight:600">' + pffEscapeHtml(labels.goHome) + '</a>' +
                             '</div>' +
                         '</div>';
                         $form.hide();
                         $form.before(panel);
                     } else {
-                        $form.before('<div class="alert-danger">' + msg + '</div>');
+                        $form.before('<div class="alert-danger">' + pffEscapeHtml(msg) + '</div>');
                     }
                 } catch (e) {
                     $form.before('<div class="alert-danger">Verification response invalid.</div>');

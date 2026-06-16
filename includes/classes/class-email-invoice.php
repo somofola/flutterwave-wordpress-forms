@@ -176,7 +176,17 @@ class Email_Invoice extends Email {
 																<tbody>
 																	<tr>
 																		<td class="font_default" style="padding:12px 24px;font-family:Helvetica,Arial,sans-serif;font-size:16px;mso-line-height-rule:exactly;text-align:center;vertical-align:middle;-webkit-border-radius:4px;border-radius:4px;background-color:#666">
-																			<a target="_blank" href="<?php echo esc_url( $this->referer_url . '?code=' . $this->code ); ?>" style="display:block;text-decoration:none;font-family:Helvetica,Arial,sans-serif;color:#fff;font-weight:bold;text-align:center">
+																			<?php
+																	$pff_helpers   = \flutterwave\payment_forms\Helpers::get_instance();
+																	$pff_retry_url = add_query_arg(
+																		array(
+																			'code' => rawurlencode( $this->code ),
+																			'sig'  => $pff_helpers->make_retry_token( $this->code ),
+																		),
+																		$this->referer_url
+																	);
+																?>
+																<a target="_blank" href="<?php echo esc_url( $pff_retry_url ); ?>" style="display:block;text-decoration:none;font-family:Helvetica,Arial,sans-serif;color:#fff;font-weight:bold;text-align:center">
 																				<span style="text-decoration:none;color:#fff;text-align:center;display:block">
 																					<?php echo esc_html__( 'Try Again', 'pff-flutterwave' ); ?>
 																				</span>

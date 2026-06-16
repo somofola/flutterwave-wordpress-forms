@@ -95,7 +95,6 @@ class Form_Submit {
 				case 'pf-vamount':
 				case 'pf-quantity':
 				case 'pf-id':
-				case 'pf-user_id':
 					$this->form_data[ $key ] = sanitize_text_field( $value );
 				break;
 				case 'pf-pemail':
@@ -105,31 +104,57 @@ class Form_Submit {
 					$this->form_data[ $key ] = sanitize_text_field( $value );
 			}
 		}
+		// Always derive user_id server-side from the current session, never trust the POST value.
+		$this->form_data['pf-user_id'] = get_current_user_id();
 	}
 
 	public function process_amount( $amount = 0 ) {
+		$meta_amount   = floatval( $this->meta['amount'] );
+		$client_amount = isset( $this->form_data['pf-amount'] ) ? floatval( $this->form_data['pf-amount'] ) : 0.0;
+
 		if ( 'no' === $this->meta['recur'] && 1 !== $this->meta['usevariableamount'] ) {
-			if ( 0 !== (int) floatval( $this->meta['amount'] ) ) {
-				$amount = floatval( $this->meta['amount'] );
+			if ( 0 !== (int) $meta_amount && 1 !== (int) $this->meta['minimum'] ) {
+				// Fixed-amount form — always trust server meta, never the client.
+				$amount = $meta_amount;
+			} elseif ( 1 === (int) $this->meta['minimum'] ) {
+				// Minimum-payment mode — client must meet or exceed configured minimum.
+				if ( $client_amount < $meta_amount || $client_amount <= 0 ) {
+					$this->response['result']  = 'failed';
+					$this->response['message'] = esc_html__( 'Amount is below the minimum allowed.', 'pff-flutterwave' );
+					exit( wp_json_encode( $this->response ) );
+				}
+				$amount = $client_amount;
 			} else {
-				$amount = $this->form_data['pf-amount'];
+				// No fixed amount and no minimum — still reject zero / negative.
+				if ( $client_amount <= 0 ) {
+					$this->response['result']  = 'failed';
+					$this->response['message'] = esc_html__( 'A valid amount is required.', 'pff-flutterwave' );
+					exit( wp_json_encode( $this->response ) );
+				}
+				$amount = $client_amount;
 			}
 			$amount = (int) str_replace( ' ', '', floatval( $amount ) );
 		}
 
-		if ( 1 === $this->meta['minimum'] && 0 !== floatval( $this->form_data['pf-amount'] ) ) {
-			$amount = floatval( $this->form_data['pf-amount'] );
-		}
-
-		if ( 1 === $this->meta['usevariableamount'] ) {
+		if ( 1 === (int) $this->meta['usevariableamount'] ) {
 			$payment_options = explode( ',', $this->meta['variableamount'] );
-			if ( count( $payment_options ) > 0 ) {
-				foreach ( $payment_options as $key => $payment_option ) {
-					list( $a, $b ) = explode( ':', $payment_option );
-					if ( $this->form_data['pf-vname'] == $a ) {
-						$amount = $b;
-					}
+			$matched         = false;
+			$vname           = isset( $this->form_data['pf-vname'] ) ? (string) $this->form_data['pf-vname'] : '';
+			foreach ( $payment_options as $payment_option ) {
+				$parts = explode( ':', $payment_option );
+				if ( count( $parts ) < 2 ) {
+					continue;
 				}
+				list( $a, $b ) = $parts;
+				if ( $vname === $a ) {
+					$amount  = floatval( $b );
+					$matched = true;
+				}
+			}
+			if ( ! $matched ) {
+				$this->response['result']  = 'failed';
+				$this->response['message'] = esc_html__( 'Invalid payment option selected.', 'pff-flutterwave' );
+				exit( wp_json_encode( $this->response ) );
 			}
 		}
 
@@ -147,6 +172,19 @@ class Form_Submit {
 
 	public function process_images() {
 		$max_file_size = $this->meta['filelimit'] * 1024 * 1024;
+
+		/**
+		 * Allowlisted MIME types and matching extensions for uploads.
+		 * Filterable so themes can lock down further per form.
+		 */
+		$allowed_mimes = apply_filters( 'pff_flutterwave_allowed_upload_mimes', array(
+			'jpg|jpeg|jpe' => 'image/jpeg',
+			'png'          => 'image/png',
+			'gif'          => 'image/gif',
+			'webp'         => 'image/webp',
+			'pdf'          => 'application/pdf',
+		) );
+
 		// phpcs:ignore WordPress.Security.NonceVerification
 		if ( ! empty( $_FILES ) ) {
 			// phpcs:ignore WordPress.Security.NonceVerification
@@ -157,16 +195,53 @@ class Form_Submit {
 						// translators: %s: maximum upload file size in MB
 						$response['message'] = sprintf( esc_html__( 'Max upload size is %sMB', 'pff-flutterwave' ), $this->meta['filelimit'] );
 						exit( wp_json_encode( $response ) );
-					} else {
-						$attachment_id  = media_handle_upload( $key_name, $this->form_id );
-						$url            = wp_get_attachment_url( $attachment_id );
-						$this->fixed_metadata[] = array(
-							'display_name'  => ucwords( str_replace( '_', ' ', $key_name ) ),
-							'variable_name' => $key_name,
-							'type'          => 'link',
-							'value'         => $url,
-						);
 					}
+
+					// Detect real MIME via finfo, then cross-check with extension.
+					$tmp_name      = isset( $value['tmp_name'] ) ? $value['tmp_name'] : '';
+					$client_name   = isset( $value['name'] ) ? sanitize_file_name( $value['name'] ) : '';
+					$detected_mime = '';
+					if ( $tmp_name && function_exists( 'finfo_open' ) ) {
+						$finfo         = finfo_open( FILEINFO_MIME_TYPE );
+						$detected_mime = $finfo ? finfo_file( $finfo, $tmp_name ) : '';
+						if ( $finfo ) {
+							finfo_close( $finfo );
+						}
+					}
+
+					$ext_check = wp_check_filetype_and_ext( $tmp_name, $client_name, $allowed_mimes );
+					if ( empty( $ext_check['ext'] ) || empty( $ext_check['type'] ) || ! in_array( $ext_check['type'], $allowed_mimes, true ) ) {
+						$response['result']  = 'failed';
+						$response['message'] = esc_html__( 'File type is not allowed.', 'pff-flutterwave' );
+						exit( wp_json_encode( $response ) );
+					}
+					if ( '' !== $detected_mime && ! in_array( $detected_mime, $allowed_mimes, true ) ) {
+						$response['result']  = 'failed';
+						$response['message'] = esc_html__( 'File content does not match an allowed type.', 'pff-flutterwave' );
+						exit( wp_json_encode( $response ) );
+					}
+
+					$attachment_id = media_handle_upload(
+						$key_name,
+						$this->form_id,
+						array(),
+						array(
+							'mimes'     => $allowed_mimes,
+							'test_form' => false,
+						)
+					);
+					if ( is_wp_error( $attachment_id ) ) {
+						$response['result']  = 'failed';
+						$response['message'] = esc_html__( 'File upload failed.', 'pff-flutterwave' );
+						exit( wp_json_encode( $response ) );
+					}
+					$url            = wp_get_attachment_url( $attachment_id );
+					$this->fixed_metadata[] = array(
+						'display_name'  => ucwords( str_replace( '_', ' ', $key_name ) ),
+						'variable_name' => $key_name,
+						'type'          => 'link',
+						'value'         => $url,
+					);
 				} else {
 					$this->fixed_metadata[] = array(
 						'display_name'  => ucwords( str_replace( '_', ' ', $key_name ) ),
@@ -228,26 +303,14 @@ class Form_Submit {
 			'metadata' => wp_json_encode( $this->fixed_metadata ),
 		);
 
-		$current_version = get_bloginfo('version');
-		if ( version_compare( '6.2', $current_version, '<=' ) ) {
-			// phpcs:disable WordPress.DB
-			$exist = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM $table WHERE post_id = %d AND email = %s AND user_id = %d AND amount = %f AND plan = %s AND ip = %s AND paid = '0' AND metadata = %s",
-					$insert['post_id'], $insert['email'], $insert['user_id'], $insert['amount'], $insert['plan'], $insert['ip'], $insert['metadata']
-				)
-			);
-			// phpcs:enable
-		} else {
-			// phpcs:disable WordPress.DB
-			$exist = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT * FROM `$table` WHERE post_id = '%d' AND email = '%s' AND user_id = '%d' AND amount = '%f' AND plan = '%s' AND ip = '%s' AND paid = '0' AND metadata = '%s'",
-					$insert['post_id'], $insert['email'], $insert['user_id'], $insert['amount'], $insert['plan'], $insert['ip'], $insert['metadata']
-				)
-			);
-			// phpcs:enable
-		}
+		// phpcs:disable WordPress.DB
+		$exist = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM `{$table}` WHERE post_id = %d AND email = %s AND user_id = %d AND amount = %f AND plan = %s AND ip = %s AND paid = '0' AND metadata = %s",
+				$insert['post_id'], $insert['email'], $insert['user_id'], $insert['amount'], $insert['plan'], $insert['ip'], $insert['metadata']
+			)
+		);
+		// phpcs:enable
 
 		if ( count( $exist ) > 0 ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery

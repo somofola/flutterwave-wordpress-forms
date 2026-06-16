@@ -109,6 +109,25 @@ class Retry_Submit {
 			// Exit here, for not processing further because of the error.
 			exit( wp_json_encode( $response ) );
 		}
+
+		$sig     = isset( $_POST['sig'] ) ? sanitize_text_field( wp_unslash( $_POST['sig'] ) ) : '';
+		$helpers = Helpers::get_instance();
+		if ( ! $helpers->verify_retry_token( $this->code, $sig ) ) {
+			$authorized = false;
+			if ( is_user_logged_in() ) {
+				$record = $helpers->get_db_record( $this->code );
+				if ( false !== $record && (int) $record->user_id > 0 && (int) $record->user_id === get_current_user_id() ) {
+					$authorized = true;
+				}
+			}
+			if ( ! $authorized ) {
+				$response = array(
+					'result'  => 'failed',
+					'message' => esc_html__( 'Unauthorized retry request.', 'pff-flutterwave' ),
+				);
+				exit( wp_json_encode( $response ) );
+			}
+		}
 		do_action( 'kkd_pff_flutterwave_before_save' );
 
 		/**
@@ -189,30 +208,15 @@ class Retry_Submit {
 		$table  = esc_sql( $wpdb->prefix . PFF_FLUTTERWAVE_TABLE );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 
-		$current_version = get_bloginfo('version');
-		if ( version_compare( '6.2', $current_version, '<=' ) ) {
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$return = $wpdb->query(
-				$wpdb->prepare(
-					"UPDATE %i SET txn_code_2 = %s WHERE txn_code = %s",
-					$table,
-					$this->new_code,
-					$this->code
-				)
-			);
-			// phpcs:enable -- Stop ignoring
-		} else {
-			// phpcs:disable WordPress.DB -- Start ignoring
-			$return = $wpdb->query(
-				$wpdb->prepare(
-					"UPDATE `%s` SET txn_code_2 = '%s' WHERE txn_code = '%s'",
-					$table,
-					$this->new_code,
-					$this->code
-				)
-			);
-			// phpcs:enable -- Stop ignoring
-		}
+		// phpcs:disable WordPress.DB
+		$return = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE `{$table}` SET txn_code_2 = %s WHERE txn_code = %s",
+				$this->new_code,
+				$this->code
+			)
+		);
+		// phpcs:enable
 
 
 		return $return;

@@ -163,12 +163,12 @@ class Payments_List_Table extends \WP_List_Table
 				$txn_code = $row->txn_code;
 			}
 			$new_data[] = array(
-				'id'       => $new_key,
-				'email'    => '<a href="mailto:' . $row->email . '">' . $row->email . '</a>',
-				'amount'   => $currency . '<b>' . number_format( $row->amount ) . '</b>',
-				'txn_code' => $txn_code,
+				'id'       => (int) $new_key,
+				'email'    => '<a href="mailto:' . esc_attr( $row->email ) . '">' . esc_html( $row->email ) . '</a>',
+				'amount'   => esc_html( $currency ) . '<b>' . esc_html( number_format( $row->amount ) ) . '</b>',
+				'txn_code' => esc_html( $txn_code ),
 				'metadata' => $this->format_metadata( $row->metadata ),
-				'date'     => $row->created_at
+				'date'     => esc_html( $row->created_at ),
 			);
 		}
 		return $new_data;
@@ -181,23 +181,31 @@ class Payments_List_Table extends \WP_List_Table
 	 * @return string
 	 */
 	public function format_metadata( $data ) {
-		$new = json_decode( $data );
+		$new  = json_decode( $data );
 		$text = '';
 
-		// Determine both for backwards compatability
-		if ( array_key_exists( "0", $new ) ) {
-			foreach ( $new as $key => $item ) {
-				if ( $item->type == 'text' ) {
-					$text .= '<b>' . $item->display_name . ": </b> " . $item->value . "<br />";
+		if ( null === $new ) {
+			return $text;
+		}
+
+		// Determine both for backwards compatibility.
+		if ( is_array( $new ) || ( is_object( $new ) && property_exists( $new, '0' ) ) ) {
+			foreach ( (array) $new as $item ) {
+				if ( ! is_object( $item ) ) {
+					continue;
+				}
+				$display = isset( $item->display_name ) ? esc_html( $item->display_name ) : '';
+				$value   = isset( $item->value ) ? $item->value : '';
+				if ( isset( $item->type ) && 'text' === $item->type ) {
+					$text .= '<b>' . $display . ': </b> ' . esc_html( $value ) . '<br />';
 				} else {
-					$text .= '<b>' . $item->display_name . ": </b>  <a target='_blank' href='" . $item->value . "'>link</a><br />";
+					$text .= '<b>' . $display . ": </b>  <a target='_blank' href='" . esc_url( $value ) . "'>link</a><br />";
 				}
 			}
 		} else {
-			$text = '';
-			if ( count( $new ) > 0 ) {
-				foreach ( $new as $key => $item ) {
-					$text .= '<b>' . $key . ": </b> " . $item . "<br />";
+			if ( count( (array) $new ) > 0 ) {
+				foreach ( (array) $new as $key => $item ) {
+					$text .= '<b>' . esc_html( $key ) . ': </b> ' . esc_html( (string) $item ) . '<br />';
 				}
 			}
 		}
