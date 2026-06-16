@@ -3,7 +3,9 @@
   Plugin Name:  Payment Forms for Flutterwave
   Plugin URI:   https://github.com/somofola/flutterwave-wordpress-forms
   Description:  Payment Forms for Flutterwave allows you create forms that will be used to bill clients for goods and services via Flutterwave.
-  Version:      1.0.15
+  Version:      1.0.16
+  Requires at least: 5.6
+  Requires PHP: 7.4
   Author:       Shola Omofola
   Author URI:   https://github.com/somofola
   License:      GPL-2.0+
